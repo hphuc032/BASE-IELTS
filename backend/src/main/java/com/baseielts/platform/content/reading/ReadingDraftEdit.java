@@ -82,7 +82,11 @@ final class ReadingDraftEdit {
                          PinnedEdition pin, Exercise input) {
         verify(exerciseId, editionId, expectedRevision, current.exerciseId(), current.editionId(), current.revision(),
                 current.draft());
-        checkPin(current.passageId(), input.passageVersionId(), pin);
+        checkExerciseContent(current.passageId(), pin, input);
+    }
+
+    static void checkExerciseContent(UUID passageId, PinnedEdition pin, Exercise input) {
+        checkPin(passageId, input.passageVersionId(), pin);
         boolean foreignEvidence = input.groups().stream().flatMap(group -> group.questions().stream())
                 .flatMap(question -> question.evidence().stream())
                 .anyMatch(evidence -> !pin.paragraphIds().contains(evidence.paragraphId()));
