@@ -3,6 +3,20 @@ import { readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { execFileSync, spawn } from "node:child_process";
 
+function fixturePsql(database: string): [string, string[]] {
+  const fixtureRoot = process.env.BASE_TEST_WSL_FIXTURE_ROOT;
+  const args = ["-XAtq", "-v", "ON_ERROR_STOP=1", "-U", "base_ielts_bootstrap", "-d", database];
+  if (!fixtureRoot) {
+    return ["docker.exe", ["compose", "exec", "-T", "postgres", "psql", ...args]];
+  }
+  const port = process.env.BASE_TEST_WSL_FIXTURE_PORT;
+  if (!/^\/tmp\/base-ielts-pg1712-[A-Za-z0-9]{8}$/.test(fixtureRoot) || !port || !/^[1-9][0-9]{3,4}$/.test(port)) {
+    throw new Error("Invalid isolated WSL PostgreSQL fixture.");
+  }
+  return ["wsl.exe", ["-d", "Ubuntu", "--", fixtureRoot + "/runtime/bin/psql",
+    "-h", fixtureRoot + "/socket", "-p", port, ...args]];
+}
+
 test("registration, verification, secure profile and sign-out", async ({ page, context, browser }) => {
   const email = process.env.BASE_BROWSER_FIXTURE_EMAIL;
   const token = process.env.BASE_BROWSER_FIXTURE_TOKEN;
@@ -160,8 +174,8 @@ test("registration, verification, secure profile and sign-out", async ({ page, c
       const shutdown = graceful ? spawn(join(process.env.JAVA_HOME!, "bin", "java.exe"), [
         "--add-modules", "jdk.attach", "../scripts/FixtureShutdown.java", String(oldPid),
       ], { windowsHide: true }) : undefined;
-      const observer = spawn("docker.exe", ["compose", "exec", "-T", "postgres", "psql",
-        "-XAtq", "-v", "ON_ERROR_STOP=1", "-U", "base_ielts_bootstrap", "-d", fixtureDatabase],
+      const [psqlCommand, psqlArgs] = fixturePsql(fixtureDatabase);
+      const observer = spawn(psqlCommand, psqlArgs,
       { cwd: "..", windowsHide: true });
       try {
         if (shutdown) {
@@ -234,8 +248,7 @@ $fixture$;
         catch { return false; }
       }, { timeout: 12_000 }).toBe(false);
       shutdown?.kill();
-      await expect.poll(() => execFileSync("docker.exe", ["compose", "exec", "-T", "postgres", "psql",
-        "-XAtq", "-v", "ON_ERROR_STOP=1", "-U", "base_ielts_bootstrap", "-d", fixtureDatabase], {
+      await expect.poll(() => execFileSync(psqlCommand, psqlArgs, {
         cwd: "..", encoding: "utf8", windowsHide: true,
         input: `
 SELECT (SELECT count(*) FROM pg_stat_activity WHERE application_name='${applicationName}') || '|' ||

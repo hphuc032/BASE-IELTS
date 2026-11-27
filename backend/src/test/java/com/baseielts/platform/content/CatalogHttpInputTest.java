@@ -50,6 +50,10 @@ class CatalogHttpInputTest {
         rejected(400, () -> CatalogHttpInput.list(Map.of("unknown", new String[] {"a"})));
         rejected(400, () -> CatalogHttpInput.list(Map.of("q", new String[] {"one", "two"})));
         rejected(400, () -> CatalogHttpInput.list(Map.of("q", new String[] {"x".repeat(101)})));
+        rejected(400, () -> CatalogHttpInput.list(Map.of("q", new String[] {"\u00A0\u202F"})));
+        String unicodeSearch = "𐐀".repeat(100);
+        assertEquals(unicodeSearch, CatalogHttpInput.list(Map.of("q", new String[] {unicodeSearch})).literalSearch());
+        rejected(400, () -> CatalogHttpInput.list(Map.of("q", new String[] {unicodeSearch + "𐐀"})));
     }
 
     private static void rejected(int status, Runnable request) {

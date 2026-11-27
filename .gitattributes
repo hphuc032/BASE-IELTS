@@ -1,0 +1,5 @@
+backend/src/main/resources/db/migration/V16__staff_catalog_routines.sql -text
+backend/src/main/resources/db/migration/V17_3__reading_staff_authoring.sql -text
+backend/src/main/resources/db/migration/V17__catalog_point_lookups.sql -text
+backend/src/main/resources/db/migration/V17_1__catalog_parent_lookups.sql -text
+backend/src/main/resources/db/migration/V17_2__reading_lesson_placement.sql -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol

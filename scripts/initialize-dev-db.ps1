@@ -1,8 +1,11 @@
-# Requires the local Compose database to be running. Does not rotate existing roles.
+param([string]$SettingsFile, [string]$FixtureContainer, [string]$WslFixtureRoot, [int]$WslPort = 55481)
+
+# Uses the local Compose database by default. Does not rotate existing roles.
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot
+if (!$SettingsFile) { $SettingsFile = Join-Path $root '.env' }
 $settings = @{}
-foreach ($line in Get-Content -LiteralPath (Join-Path $root '.env')) {
+foreach ($line in Get-Content -LiteralPath $SettingsFile) {
     if ($line -match '^([A-Z_]+)=(.*)$') { $settings[$Matches[1]] = $Matches[2] }
 }
 $bootstrap = $settings['BASE_DB_BOOTSTRAP_USER']
@@ -130,7 +133,19 @@ COMMIT;
 Push-Location $root
 try {
     # Keep SQL containing local credentials off the command line and out of output.
-    $commands | docker compose exec -T postgres psql -X -q -v ON_ERROR_STOP=1 -U $bootstrap -d $database 2>$null
+    if ($WslFixtureRoot) {
+        if ($WslFixtureRoot -cnotmatch '^/tmp/base-ielts-pg1712-[A-Za-z0-9]{8}$' -or !$SettingsFile -or $FixtureContainer) {
+            throw 'Expected a dedicated WSL PostgreSQL fixture and explicit fixture settings.'
+        }
+        $commands | wsl.exe -d Ubuntu -- "$WslFixtureRoot/runtime/bin/psql" -h "$WslFixtureRoot/socket" -p $WslPort -Xq -v ON_ERROR_STOP=1 -U $bootstrap -d $database 2>$null
+    } elseif ($FixtureContainer) {
+        if ($FixtureContainer -cnotmatch '^base-ielts-staff-test-[a-f0-9]{32}$') {
+            throw 'Expected a generated staff fixture container name.'
+        }
+        $commands | docker exec -i $FixtureContainer psql -X -q -v ON_ERROR_STOP=1 -U $bootstrap -d $database 2>$null
+    } else {
+        $commands | docker compose exec -T postgres psql -X -q -v ON_ERROR_STOP=1 -U $bootstrap -d $database 2>$null
+    }
     if ($LASTEXITCODE -ne 0) { throw 'Development role provisioning failed. Check local Compose health and bootstrap role configuration.' }
 } finally {
     Pop-Location

@@ -160,6 +160,22 @@ class VerificationPostgresTest {
             });
     }
 
+    private static ProcessBuilder fixturePsql(String database) {
+        String root = System.getenv("BASE_TEST_WSL_FIXTURE_ROOT");
+        if (root == null || root.isEmpty()) {
+            return new ProcessBuilder("docker.exe", "compose", "exec", "-T", "postgres", "psql",
+                "-XAtq", "-v", "ON_ERROR_STOP=1", "-U", "base_ielts_bootstrap", "-d", database)
+                .directory(new java.io.File(".."));
+        }
+        String port = System.getenv("BASE_TEST_WSL_FIXTURE_PORT");
+        if (!root.matches("/tmp/base-ielts-pg1712-[A-Za-z0-9]{8}") || port == null || !port.matches("[1-9][0-9]{3,4}")) {
+            throw new IllegalArgumentException("Expected a dedicated WSL PostgreSQL fixture");
+        }
+        return new ProcessBuilder("wsl.exe", "-d", "Ubuntu", "--", root + "/runtime/bin/psql",
+            "-h", root + "/socket", "-p", port, "-XAtq", "-v", "ON_ERROR_STOP=1",
+            "-U", "base_ielts_bootstrap", "-d", database);
+    }
+
     private static long percentile(java.util.List<Long> ordered, double percentile) {
         return ordered.get((int) Math.ceil(percentile * ordered.size()) - 1);
     }
@@ -174,9 +190,7 @@ class VerificationPostgresTest {
         String password = System.getenv("BASE_DB_RUNTIME_PASSWORD");
         String email = "load-retention-" + UUID.randomUUID() + "@identity-test.invalid";
         String liveEmail = "load-retention-live-" + UUID.randomUUID() + "@identity-test.invalid";
-        var cleanup = new ProcessBuilder("docker.exe", "compose", "exec", "-T", "postgres", "psql",
-            "-XAtq", "-v", "ON_ERROR_STOP=1", "-U", "base_ielts_bootstrap", "-d", database)
-            .directory(new java.io.File("..")).start();
+        var cleanup = fixturePsql(database).start();
         try (var commands = cleanup.outputWriter();
              var output = cleanup.inputReader();
              var observer = DriverManager.getConnection(url, user, password);
@@ -288,9 +302,7 @@ class VerificationPostgresTest {
                 admission.shutdown();
             }
         }
-        var observer = new ProcessBuilder("docker.exe", "compose", "exec", "-T", "postgres", "psql",
-            "-XAtq", "-v", "ON_ERROR_STOP=1", "-U", "base_ielts_bootstrap", "-d", database)
-            .directory(new java.io.File("..")).start();
+        var observer = fixturePsql(database).start();
         try (var input = observer.getOutputStream()) {
             input.write(("""
                 SELECT count(*) FROM identity.users u JOIN identity.verification_tokens t ON t.user_id=u.id
@@ -421,7 +433,11 @@ class VerificationPostgresTest {
     void definitiveRollbackPreservesBindingAndUncertainCommitRequiresReauthentication() throws Exception {
         String email = "commit-" + UUID.randomUUID() + "@identity-test.invalid";
         String password = "dedicated commit outcome fixture";
-        MvcResult initial = mvc.perform(get("/api/v1/auth/csrf").param("scope", "PREAUTH"))
+        MvcResult initial = mvc.perform(get("/api/v1/auth/csrf").param("scope", "PREAUTH").with(request -> {
+                // This fixture models a distinct client of the real per-source admission bucket.
+                request.setRemoteAddr("192.0.2.12");
+                return request;
+            }))
             .andExpect(status().isOk()).andReturn();
         Cookie preauth = initial.getResponse().getCookie(PreauthStore.COOKIE);
         String csrf = csrfToken(initial);
@@ -436,7 +452,11 @@ class VerificationPostgresTest {
             .andExpect(status().isNoContent());
         String form = json.writeValueAsString(new VerificationController.Login(email, password));
         Cookie active = login(preauth, csrf, form);
-        MvcResult retry = mvc.perform(get("/api/v1/auth/csrf").param("scope", "PREAUTH"))
+        MvcResult retry = mvc.perform(get("/api/v1/auth/csrf").param("scope", "PREAUTH").with(request -> {
+                // This fixture models a distinct client of the real per-source admission bucket.
+                request.setRemoteAddr("192.0.2.12");
+                return request;
+            }))
             .andExpect(status().isOk()).andReturn();
         Cookie retryCookie = retry.getResponse().getCookie(PreauthStore.COOKIE);
         String retryCsrf = csrfToken(retry);

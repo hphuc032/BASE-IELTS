@@ -19,10 +19,10 @@ class CatalogPostgresTest {
     private static final String MIGRATION_USER = "base_ielts_migration";
 
     @Test
-    void freshDatabaseMigratesThroughV14AndEnforcesCatalogBoundary() throws Exception {
+    void freshDatabaseMigratesThroughV17_3AndEnforcesCatalogBoundary() throws Exception {
         String url = fixtureUrl("BASE_TEST_CATALOG_FRESH_DB");
-        Flyway flyway = flyway(url, "14");
-        assertEquals(14, flyway.migrate().migrationsExecuted);
+        Flyway flyway = flyway(url, "17.3");
+        assertEquals(20, flyway.migrate().migrationsExecuted);
         assertEquals(0, flyway.migrate().migrationsExecuted);
         flyway.validate();
         verifyCatalog(url);
@@ -30,25 +30,40 @@ class CatalogPostgresTest {
     }
 
     @Test
-    void upgradeFromV13PreservesIdentityAndAddsCatalogAuditAndCapabilityStorage() throws Exception {
+    void upgradeFromV15PreservesIdentityAndAddsStaffCatalogRoutines() throws Exception {
         String url = fixtureUrl("BASE_TEST_CATALOG_UPGRADE_DB");
-        assertEquals(13, flyway(url, "13").migrate().migrationsExecuted);
+        assertEquals(15, flyway(url, "15").migrate().migrationsExecuted);
         try (Connection connection = migrateConnection(url); Statement statement = connection.createStatement()) {
             statement.executeUpdate("""
                 INSERT INTO identity.users (canonical_email, display_name)
-                VALUES ('m2-v13-fixture@example.test', 'V13 catalog fixture')
+                VALUES ('m2-v15-fixture@example.test', 'V15 catalog fixture')
+                """);
+            statement.executeUpdate("""
+                WITH course AS (
+                    INSERT INTO content_catalog.course (slug, title, display_order)
+                    VALUES ('upgrade-audit-fixture', 'Historical audit target', 1) RETURNING id
+                )
+                INSERT INTO content_catalog.content_audit_events (actor_id, operation, entity_kind, course_id, revision, request_id)
+                SELECT u.id, 'CREATE', 'COURSE', course.id, 1, '86f4a251-22a2-4dfb-ad88-25c6d95fe276'
+                FROM identity.users u CROSS JOIN course WHERE u.canonical_email = 'm2-v15-fixture@example.test'
                 """);
             assertEquals("true", scalar(statement, """
-                SELECT (to_regclass('content_catalog.content_audit_events') IS NULL)::text
+                SELECT (to_regnamespace('catalog_staff') IS NULL)::text
                 """));
         }
-        Flyway upgraded = flyway(url, "14");
-        assertEquals(1, upgraded.migrate().migrationsExecuted);
+        Flyway upgraded = flyway(url, "17.3");
+        assertEquals(5, upgraded.migrate().migrationsExecuted);
         upgraded.validate();
         try (Connection connection = migrateConnection(url); Statement statement = connection.createStatement()) {
+            assertEquals("COURSE:CREATE:upgrade-audit-fixture", scalar(statement, """
+                SELECT a.entity_kind::text || ':' || a.operation::text || ':' || c.slug
+                FROM content_catalog.content_audit_events a JOIN content_catalog.course c ON c.id = a.course_id
+                WHERE a.request_id = '86f4a251-22a2-4dfb-ad88-25c6d95fe276'
+                  AND a.passage_id IS NULL AND a.passage_version_id IS NULL AND a.placement_passage_id IS NULL
+                """));
             assertEquals("PENDING:0", scalar(statement, """
                 SELECT status::text || ':' || security_revision
-                FROM identity.users WHERE canonical_email = 'm2-v13-fixture@example.test'
+                FROM identity.users WHERE canonical_email = 'm2-v15-fixture@example.test'
                 """));
         }
         verifyCatalog(url);
@@ -64,6 +79,13 @@ class CatalogPostgresTest {
             assertEquals("identity_migration_owner", scalar(statement, """
                 SELECT pg_get_userbyid(nspowner) FROM pg_namespace WHERE nspname = 'content_catalog'
                 """));
+            assertEquals("957144442", scalar(statement, """
+                SELECT checksum::text FROM identity.flyway_schema_history WHERE version = '16' AND success
+                """));
+            assertEquals("false", scalar(statement, """
+                SELECT has_function_privilege('base_ielts_runtime',
+                    'catalog_staff.get_item(text,uuid,bigint,uuid)', 'EXECUTE')::text
+                """));
             assertEquals("3", scalar(statement, """
                 SELECT count(*) FROM pg_indexes WHERE schemaname = 'content_catalog'
                 AND indexname IN ('course_order_idx', 'course_level_status_order_idx', 'reading_lesson_status_order_idx')
@@ -76,7 +98,7 @@ class CatalogPostgresTest {
                     """);
                 statement.executeUpdate("""
                     INSERT INTO content_catalog.course_level (course_id, code, name, display_order)
-                    SELECT id, 'a1', 'A1', 1 FROM content_catalog.course
+                    SELECT id, 'a1', 'A1', 1 FROM content_catalog.course WHERE slug IN ('reading', 'practice')
                     """);
                 statement.executeUpdate("""
                     INSERT INTO content_catalog.reading_lesson (level_id, slug, title, display_order)

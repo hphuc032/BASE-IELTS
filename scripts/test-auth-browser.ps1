@@ -1,4 +1,5 @@
 param([Parameter(Mandatory)][ValidatePattern('^base_ielts_m1test_[0-9]+$')][string]$FixtureDatabase,[switch]$Https,[switch]$ActiveShutdown,[switch]$GracefulShutdown)
+. (Join-Path $PSScriptRoot 'm1-fixture-psql.ps1')
 $ErrorActionPreference='Stop'
 $root=Split-Path $PSScriptRoot
 Push-Location $root
@@ -11,12 +12,13 @@ try {
         $env:SPRING_APPLICATION_ADMIN_ENABLED = 'true'
         $env:SERVER_SHUTDOWN = 'graceful'
     }
-    foreach ($line in Get-Content .env) {
+    foreach ($line in $(if (!$env:BASE_TEST_WSL_FIXTURE_ROOT) { Get-Content .env })) {
         if ($line -match '^(BASE_DB_(?:RUNTIME_USER|RUNTIME_PASSWORD))=(.+)$') {
             [Environment]::SetEnvironmentVariable($Matches[1],$Matches[2],'Process')
         }
     }
-    $env:BASE_DB_JDBC_URL="jdbc:postgresql://127.0.0.1:5432/$FixtureDatabase"
+    $fixturePort = if ($env:BASE_TEST_WSL_FIXTURE_ROOT) { $env:BASE_TEST_WSL_JDBC_PORT } else { 5432 }
+    $env:BASE_DB_JDBC_URL="jdbc:postgresql://127.0.0.1:${fixturePort}/$FixtureDatabase"
     $env:BASE_BACKEND_PORT='18083'
     $env:BASE_BACKEND_ORIGIN='http://127.0.0.1:18083'
     $env:BASE_IDENTITY_ENABLED='true'
@@ -30,7 +32,8 @@ try {
     if ($ActiveShutdown) {
         $env:BASE_ACCEPTANCE_DATABASE=$FixtureDatabase
         $env:BASE_ACCEPTANCE_APPLICATION_NAME="m1-cutover-$id"
-        $env:BASE_DB_JDBC_URL += "?ApplicationName=$env:BASE_ACCEPTANCE_APPLICATION_NAME"
+        $fixturePort = if ($env:BASE_TEST_WSL_FIXTURE_ROOT) { $env:BASE_TEST_WSL_JDBC_PORT } else { 5432 }
+    $env:BASE_DB_JDBC_URL += "?ApplicationName=$env:BASE_ACCEPTANCE_APPLICATION_NAME"
     }
     $seed=@"
 WITH pending AS (
@@ -44,7 +47,7 @@ INSERT INTO identity.verification_tokens(user_id,email_revision,token_digest,iss
 SELECT id,0,decode(CASE WHEN canonical_email='$env:BASE_BROWSER_FIXTURE_EMAIL' THEN '$digest' ELSE '$secondDigest' END,'hex'),
     clock_timestamp(),clock_timestamp()+interval '3 minutes' FROM pending;
 "@
-    $seed | docker compose exec -T postgres psql -Xq -v ON_ERROR_STOP=1 -U base_ielts_bootstrap -d $FixtureDatabase
+    $seed | Invoke-M1FixturePsql -Xq -v ON_ERROR_STOP=1 -U base_ielts_bootstrap -d $FixtureDatabase
     if ($LASTEXITCODE) { throw 'Unable to seed isolated browser fixture.' }
     if ($ActiveShutdown) {
         @"
@@ -60,7 +63,7 @@ END;
 CREATE TRIGGER fixture_pause_$id BEFORE UPDATE OF display_name ON identity.users
 FOR EACH ROW EXECUTE FUNCTION identity.fixture_pause_$id();
 COMMIT;
-"@ | docker compose exec -T postgres psql -Xq -v ON_ERROR_STOP=1 -U base_ielts_bootstrap -d $FixtureDatabase
+"@ | Invoke-M1FixturePsql -Xq -v ON_ERROR_STOP=1 -U base_ielts_bootstrap -d $FixtureDatabase
         if ($LASTEXITCODE) { throw 'Unable to install the isolated transaction barrier.' }
         $triggerInstalled = $true
     }
@@ -101,7 +104,7 @@ COMMIT;
     }
     if ($triggerInstalled) {
         "DROP TRIGGER fixture_pause_$id ON identity.users; DROP FUNCTION identity.fixture_pause_$id();" |
-            docker compose exec -T postgres psql -Xq -v ON_ERROR_STOP=1 -U base_ielts_bootstrap -d $FixtureDatabase
+            Invoke-M1FixturePsql -Xq -v ON_ERROR_STOP=1 -U base_ielts_bootstrap -d $FixtureDatabase
         if ($LASTEXITCODE) { throw 'Unable to remove the isolated transaction barrier.' }
     }
     if ($Https -and $env:BASE_ACCEPTANCE_TLS_DIR) {

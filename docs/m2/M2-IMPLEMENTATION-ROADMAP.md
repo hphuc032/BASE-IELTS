@@ -21,3 +21,13 @@ Content migrations are forward-only under separate ownership. A feature can land
 ## Reconciled sequencing
 
 M2.1 and canonical M2.2 can proceed independently after authorization within their respective gates. M2.3 uses exact Passage edition and paragraph IDs. M2.4 adds receipts and lookup under F03/F04 after the applicable technical decisions. See the [remediation crosswalk](M2-DECISION-REGISTER.md#v12-remediation-crosswalk) for work package dependencies. M2.5 verifies a safe fixture. Public discovery remains disabled until M3 and samples remain gated by TECH-06. The recorded M2 authorization takes effect after the design release is verified.
+
+## 2026-11-27 scope clarification
+
+[PO-07 and PO-08](M2-DECISION-REGISTER.md#2026-11-27-implementation-scope-approvals) confirm M2.2 backend Passage authoring and Passage-to-Lesson placement, M2.3 Exercise/Evidence, and M2.6 staff editors. V18 stays reserved and unimplemented in M2.2. The placement contract uses the existing Catalog ReadingLesson identity and requires an approved forward-only migration order.
+
+## 2026-11-27 G03 verification after PO-09 and PO-10
+
+M2.1 and M2.2 must show HTTP p95 ≤ 100 ms and p99 ≤ 200 ms under representative normal workload. M2.1 must independently verify fail-fast Catalog pool admission, HTTP 503 at saturation, no protected SQL on rejection, a bounded queue, and recovery after release. Keep overload observations separate from normal latency percentiles. Preserve the M1 staff transaction and security checks. [Approved decisions](M2-DECISION-REGISTER.md#2026-11-27-performance-and-overload-approvals)
+
+PO-11 sets the initial Catalog operating envelope. PO-12 authorizes the feature checkpoint after all applicable acceptance gates pass. The release does not change the M2.3 Exercise/Evidence, M2.4 publication, M2.6 staff UI or M3 public-discovery sequencing. [Decision register](M2-DECISION-REGISTER.md#2026-11-27-operational-envelope-and-feature-release-approvals)

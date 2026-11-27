@@ -45,3 +45,26 @@ Approval context for F03 and F04: the Product Owner's explicit M2 Design v1.2 ap
 | F04 | 2026-11-27 | APPROVED BY PRODUCT OWNER | Add the narrow M2 staff-reader fence privilege contract: content_staff_reader has USAGE on account_fence_routines and EXECUTE on the exact lockAndCheckActor(uuid,bigint) signature in that schema. Use only allowlisted scoped projections. Hold the fence on the same connection and outer transaction through full DTO materialization. No authority to provision or change the database under this approval. |
 
 G01–G03 remain [open technical decisions](M2-OPEN-QUESTIONS.md#remaining-technical-gates). The Product Owner’s 2026-11-27 M2 Release and Autonomous Implementation directive authorizes freezing and releasing v1.2 to main, then implementing on a dedicated feature branch after verification of the remote documentation commit. Existing technical and milestone gates still apply.
+
+## 2026-11-27 implementation scope approvals
+
+| Decision ID | Date | Status | Approved decision |
+| --- | --- | --- | --- |
+| PO-07 | 2026-11-27 | APPROVED BY PRODUCT OWNER · Option A | Exercise, ExerciseVersion, Evidence, question graphs, answer keys, marking, and Exercise authoring and persistence remain in M2.3. V18 is reserved and unimplemented during M2.2. Grading remains outside this work. |
+| PO-08 | 2026-11-27 | APPROVED BY PRODUCT OWNER · Option A | M2.2 covers backend Passage staff authoring. Catalog and Reading staff editor UIs belong to M2.6. |
+
+## 2026-11-27 performance and overload approvals
+
+| Decision | Date | Status | Approved policy |
+| --- | --- | --- | --- |
+| PO-09 | 2026-11-27 | APPROVED BY PRODUCT OWNER · Option A | Representative normal workload must meet HTTP p95 ≤ 100 ms and HTTP p99 ≤ 200 ms. Use authenticated end-to-end HTTP observations. |
+| PO-10 | 2026-11-27 | APPROVED BY PRODUCT OWNER · Option A | Catalog returns fail-fast HTTP 503 when its database pool cannot admit additional work. Admission is bounded without an unbounded waiting queue. Rejected requests execute no protected business SQL. Database SQL requires successful connection acquisition. |
+
+Measure normal workload and overload separately. Exclude overload 503 responses from normal-workload latency percentiles and report them separately. Demonstrate recovery after connections become available. AUTH, CSRF, account fencing, authorization and atomic audit remain required. These approvals set policy. G03 closure depends on reproducible evidence.
+
+## 2026-11-27 operational envelope and feature release approvals
+
+| Decision | Status | Approved policy |
+| --- | --- | --- |
+| PO-11 | APPROVED · Option A | Initial Catalog operations support 20,000 Courses, 24 Levels per Course and 256 Lessons per Level. Dedicated pools have three reader and two writer connections with no waiting queue. The API limits are page size 50, page index 99 and 100 Unicode scalar values in search. Normal HTTP must meet PO-09. Overload must meet PO-10. These are operational limits and the existing API bounds. No new database cardinality constraints were authorized. |
+| PO-12 | APPROVED · Option A | After all release gates pass, create a reviewed checkpoint on the designated integration feature branch, push to GitHub, verify the exact remote SHA and publish the acceptance documentation. Main merge, production deployment, production provisioning and public route activation require separate approval. |

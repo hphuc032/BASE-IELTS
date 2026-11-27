@@ -1,8 +1,9 @@
-param([switch]$IncludeReading)
+param([switch]$IncludeReading, [string]$ComposeRoot)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot
+if (!$ComposeRoot) { $ComposeRoot = $root }
 $settings = @{}
-foreach ($line in Get-Content -LiteralPath (Join-Path $root '.env')) {
+foreach ($line in Get-Content -LiteralPath (Join-Path $ComposeRoot '.env')) {
     if ($line -cmatch '^(BASE_DB_BOOTSTRAP_USER|BASE_DB_MIGRATION_PASSWORD)=(.+)$') {
         $settings[$Matches[1]] = $Matches[2]
     }
@@ -41,7 +42,7 @@ try {
 CREATE DATABASE $database;
 GRANT CONNECT ON DATABASE $database TO base_ielts_migration, base_ielts_runtime;
 GRANT CREATE ON DATABASE $database TO identity_migration_owner;
-"@ | docker compose exec -T postgres psql -Xq -v ON_ERROR_STOP=1 -U $bootstrap -d postgres
+"@ | docker compose --project-directory $ComposeRoot exec -T postgres psql -Xq -v ON_ERROR_STOP=1 -U $bootstrap -d postgres
         if ($LASTEXITCODE -ne 0) { throw "Unable to prepare local fixture $database." }
         Write-Output "M2 fixture: $database"
     }

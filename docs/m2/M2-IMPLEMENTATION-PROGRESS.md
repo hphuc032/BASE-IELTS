@@ -29,3 +29,25 @@ V14 adds private capability and typed catalog audit storage. The staff runtime r
 ## Parallel M2.1 and M2.2 checkpoint
 
 Decision A is implemented as a narrow shared AUTH transaction seam with scoped CSRF, dedicated DB principal checks and the original M1 account guard. A bounded servlet parser handles the catalog request contract. The staff HTTP routes remain disabled pending G02/G03 and the scoped business routines. Decision B keeps staff UI in M2.6. Under decision C, Agent B prepared private V15 Passage storage independently and verified it against PostgreSQL. The before/after identity regression and focused staff suite passed. Combined catalog/Reading storage also passed. [Intake](M2-PARALLEL-INTAKE-MANIFEST.md) · [M2.1 evidence](M2.1-ACCEPTANCE-REPORT.md) · [M2.2 evidence](M2.2-ACCEPTANCE-REPORT.md)
+
+## 2026-11-27 · Integration owner checkpoint
+
+Both M2.1 and M2.2 acceptance remain blocked. Recovered and checksum-verified V16, tested V17's Catalog point access correction, repaired the isolated staff fixture's routine source, and reserved migration ownership for Reading storage and placement. See [integration checkpoint](M2-INTEGRATION-CHECKPOINT.md) for exact commands, results and open gates.
+
+## 2026-11-27 scope clarification
+
+[PO-07 and PO-08](M2-DECISION-REGISTER.md#2026-11-27-implementation-scope-approvals) confirm M2.2 backend Passage authoring and Passage-to-Lesson placement, M2.3 Exercise/Evidence, and M2.6 staff editors. V18 stays reserved and unimplemented in M2.2. The placement contract uses the existing Catalog ReadingLesson identity and requires an approved forward-only migration order.
+
+### PO-07 and PO-08 execution checkpoint
+
+The staff runner now applies the full Flyway sequence before fixture grants and HTTP tests. V17.1 improves scoped Catalog list plans, and V17.2 adds the private placement relation before reserved V18. The Reading staff route candidate remains disabled pending PostgreSQL routines, atomic audit and acceptance. Both milestone acceptance decisions remain blocked. [Integration evidence](M2-INTEGRATION-CHECKPOINT.md#2026-11-27-integrated-verification)
+
+## 2026-11-27 integrated verification through V17.3
+
+Catalog admission and the Reading V17.3 routines are composed in the isolated integration worktree. The combined 57-test run passed on PostgreSQL 17.12, including fresh and upgrade migration paths, real HTTP fixture measurements, shared audit and cross-module lock/rollback. The separate storage regression passed eight cases. M1 clean verify passed with opt-in skips recorded in the checkpoint. Both milestone release decisions remain open on the G03 workload and graph bounds documented in their acceptance reports. V18 and V19 remain reserved. [Integration results](M2-INTEGRATION-CHECKPOINT.md#2026-11-27-final-integration-phase)
+
+PO-11 and PO-12 are recorded. The integrated launcher now selects the approved Catalog shape and separate overload fixtures. Local clean verify and frontend build passed. Docker engine control timed out before isolated database startup, and Reading graph cardinality remains a documented release gate. [Baseline manifest](M2-INTEGRATION-BASELINE-MANIFEST.md) · [Release evidence](M2-INTEGRATION-CHECKPOINT.md#po-11-and-po-12-release-gate)
+
+### Dedicated PostgreSQL acceptance complete
+
+The PO-11, PO-10, graph-boundary and combined regression gates passed on separate source-built PostgreSQL 17.12. The M1 opt-in, frontend and all three Edge checks also passed. The approved local operational envelopes and fixture commands are recorded in the module reports. PO-12 covers the feature checkpoint; G01, G02 and later content milestones remain gated. [Final acceptance record](M2.1-M2.2-ACCEPTANCE.md)

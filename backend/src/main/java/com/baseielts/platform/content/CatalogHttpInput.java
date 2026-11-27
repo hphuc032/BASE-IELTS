@@ -18,11 +18,19 @@ final class CatalogHttpInput {
     private CatalogHttpInput() {}
 
     static CatalogInput write(HttpServletRequest request, CatalogInput.Kind kind) {
-        return parseBody(request, body -> CatalogInput.parse(kind, body));
+        return write(body(request), kind);
     }
 
     static CatalogInput.Status status(HttpServletRequest request) {
-        return parseBody(request, CatalogInput::parseStatus);
+        return status(body(request));
+    }
+
+    static CatalogInput write(byte[] body, CatalogInput.Kind kind) {
+        return parse(body, value -> CatalogInput.parse(kind, value));
+    }
+
+    static CatalogInput.Status status(byte[] body) {
+        return parse(body, CatalogInput::parseStatus);
     }
 
     static ListFilter list(Map<String, String[]> parameters) {
@@ -32,7 +40,7 @@ final class CatalogHttpInput {
         int page = number(parameters, "page", 0, 0, MAX_PAGE);
         int size = number(parameters, "size", 20, 1, MAX_SIZE);
         String query = value(parameters, "q");
-        if (query != null && (query.isBlank() || query.codePointCount(0, query.length()) > 100
+        if (query != null && (query.codePoints().allMatch(CatalogInput::isWhitespace) || query.codePointCount(0, query.length()) > 100
             || query.codePoints().anyMatch(Character::isISOControl))) {
             throw rejected(400, "INVALID_REQUEST");
         }
@@ -63,7 +71,7 @@ final class CatalogHttpInput {
         }
     }
 
-    private static <T> T parseBody(HttpServletRequest request, Function<byte[], T> parser) {
+    static byte[] body(HttpServletRequest request) {
         MediaType type;
         try {
             type = request.getContentType() == null ? null : MediaType.parseMediaType(request.getContentType());
@@ -82,8 +90,16 @@ final class CatalogHttpInput {
             if (body.length > CatalogInput.MAX_BODY_BYTES) {
                 throw rejected(413, "BODY_TOO_LARGE");
             }
+            return body;
+        } catch (IOException malformed) {
+            throw rejected(400, "INVALID_REQUEST");
+        }
+    }
+
+    private static <T> T parse(byte[] body, Function<byte[], T> parser) {
+        try {
             return parser.apply(body);
-        } catch (IOException | IllegalArgumentException malformed) {
+        } catch (IllegalArgumentException malformed) {
             throw rejected(400, "INVALID_REQUEST");
         }
     }

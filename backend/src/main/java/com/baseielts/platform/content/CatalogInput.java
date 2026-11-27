@@ -141,7 +141,7 @@ record CatalogInput(String key, String label, String description, int displayOrd
         return value.substring(start, end);
     }
 
-    private static boolean isWhitespace(int codePoint) {
+    static boolean isWhitespace(int codePoint) {
         // Unicode NEL is an ISO control and has already been rejected.
         return Character.isWhitespace(codePoint) || Character.isSpaceChar(codePoint);
     }
