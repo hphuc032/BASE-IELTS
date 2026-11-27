@@ -1,0 +1,22 @@
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Build outputs
+**/target/
+**/node_modules/
+**/.next/
+**/test-results/
+**/playwright-report/
+*.tsbuildinfo
+
+# Editors and local diagnostics
+.idea/
+.vscode/
+*.log
+
+# Generated Next.js type entrypoint
+**/next-env.d.ts

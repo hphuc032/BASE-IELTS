@@ -1,0 +1,10 @@
+:root { color: #172722; background: #f3f5ed; font-family: system-ui, sans-serif; }
+body { margin: 0; padding: clamp(1rem, 6vw, 4rem); }
+main { max-width: 30rem; margin: 0 auto; border: 1px solid #dce3d8; border-radius: 1.5rem; background: white; padding: clamp(1rem, 6vw, 2rem); }
+h1 { font: 600 2.5rem/1.1 Georgia, serif; }
+form:not([hidden]), label { display: grid; gap: .75rem; }
+input, button { font: inherit; padding: .65rem; border-radius: .5rem; }
+input { border: 1px solid #74877b; }
+button { justify-self: start; border: 0; background: #204d3f; color: white; }
+a { color: #204d3f; }
+:focus-visible { outline: 3px solid #296d57; outline-offset: 4px; }

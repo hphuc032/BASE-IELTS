@@ -1,0 +1,11 @@
+spring:
+  datasource:
+    url: ${BASE_DB_JDBC_URL:jdbc:postgresql://127.0.0.1:5432/base_ielts}
+  flyway:
+    enabled: ${BASE_DB_MIGRATE:false}
+    default-schema: identity
+    init-sqls:
+      - SET ROLE identity_migration_owner
+    url: ${BASE_DB_JDBC_URL:jdbc:postgresql://127.0.0.1:5432/base_ielts}
+    user: ${BASE_DB_MIGRATION_USER:}
+    password: ${BASE_DB_MIGRATION_PASSWORD:}

@@ -1,0 +1,39 @@
+spring:
+  application:
+    name: base-ielts
+  datasource:
+    url: ${BASE_DB_JDBC_URL:}
+    username: ${BASE_DB_RUNTIME_USER:}
+    password: ${BASE_DB_RUNTIME_PASSWORD:}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  # M1.2 provisions the schema. Migration credentials are supplied separately.
+  flyway:
+    enabled: false
+
+server:
+  address: ${BASE_BACKEND_BIND:127.0.0.1}
+  port: ${BASE_BACKEND_PORT:8080}
+  forward-headers-strategy: none
+  tomcat:
+    accept-count: 32
+    max-connections: 128
+    connection-timeout: 5s
+    threads:
+      max: 64
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+
+management:
+  endpoints:
+    web:
+      base-path: /api/v1
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
