@@ -39,7 +39,7 @@ GRANT CREATE ON DATABASE $database TO identity_migration_owner;
         $previous[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
         [Environment]::SetEnvironmentVariable($name, $environment[$name], 'Process')
     }
-    & (Join-Path $root 'backend/mvnw.cmd') -B -f backend/pom.xml '-Dtest=CatalogPostgresTest' test
+    & (Join-Path $root 'backend/mvnw.cmd') -B -f backend/pom.xml '-Dtest=CatalogPostgresTest,CatalogInputTest' test
     if ($LASTEXITCODE -ne 0) { throw "Catalog PostgreSQL tests failed with exit code $LASTEXITCODE." }
 } finally {
     foreach ($name in $previous.Keys) {

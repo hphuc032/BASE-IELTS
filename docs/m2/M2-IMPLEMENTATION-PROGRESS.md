@@ -21,3 +21,7 @@ The PostgreSQL fixtures were `base_ielts_m2test_fresh_20261127034055697` and `ba
 ## Remaining acceptance
 
 M2.1 is in progress. G02 needs a deployment owner to confirm the provisioning principal lifecycle, authenticated mapping, credential ownership, rotation and recovery. G03 needs measured catalog page/search/count and transaction budgets before implementing those operations. Staff REST, F04 effective read grants and concurrency, revision CAS, audit and end-to-end T01/T08/T09/T11/T13/T15 remain open. G01 gates M2.4 publication and does not block the schema checkpoint. M3 discovery and sample activation remain disabled. [Technical gates](M2-OPEN-QUESTIONS.md#remaining-technical-gates)
+
+## M2.1 authority storage and input checkpoint
+
+V14 adds private capability and typed catalog audit storage. The staff runtime remains disabled. The typed input parser and fresh/V13-upgrade PostgreSQL suite passed five cases without skips. The suite also measured a literal course page/count on 10,000 synthetic rows. See the [M2.1 checkpoint report](M2.1-ACCEPTANCE-REPORT.md) for exact commands, fixtures, G02/G03 boundaries and the unresolved authorization integration. [M2.2 status](M2.2-ACCEPTANCE-REPORT.md)
