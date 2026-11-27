@@ -25,3 +25,7 @@ M2.1 is in progress. G02 needs a deployment owner to confirm the provisioning pr
 ## M2.1 authority storage and input checkpoint
 
 V14 adds private capability and typed catalog audit storage. The staff runtime remains disabled. The typed input parser and fresh/V13-upgrade PostgreSQL suite passed five cases without skips. The suite also measured a literal course page/count on 10,000 synthetic rows. See the [M2.1 checkpoint report](M2.1-ACCEPTANCE-REPORT.md) for exact commands, fixtures, G02/G03 boundaries and the unresolved authorization integration. [M2.2 status](M2.2-ACCEPTANCE-REPORT.md)
+
+## Parallel M2.1 and M2.2 checkpoint
+
+Decision A is implemented as a narrow shared AUTH transaction seam with scoped CSRF, dedicated DB principal checks and the original M1 account guard. A bounded servlet parser handles the catalog request contract. The staff HTTP routes remain disabled pending G02/G03 and the scoped business routines. Decision B keeps staff UI in M2.6. Under decision C, Agent B prepared private V15 Passage storage independently and verified it against PostgreSQL. The before/after identity regression and focused staff suite passed. Combined catalog/Reading storage also passed. [Intake](M2-PARALLEL-INTAKE-MANIFEST.md) · [M2.1 evidence](M2.1-ACCEPTANCE-REPORT.md) · [M2.2 evidence](M2.2-ACCEPTANCE-REPORT.md)

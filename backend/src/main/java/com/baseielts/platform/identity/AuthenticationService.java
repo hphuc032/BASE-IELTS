@@ -13,6 +13,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Service
 @ConditionalOnProperty(name = "base.identity.enabled", havingValue = "true")
@@ -102,6 +103,38 @@ final class AuthenticationService {
         }
     }
 
+    <T> T authorizedStaff(AuthSessions.Binding binding, StaffAuthentication.Database database,
+                          StaffAuthentication.Operation<T> operation) {
+        // A staff caller owns its outer transaction. Never join an identity or content transaction.
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            throw new IllegalStateException("Staff authentication requires a new transaction boundary");
+        }
+        JdbcTemplate staffJdbc = database.jdbc();
+        try (AccountGuard guard = new AccountGuard(binding.account)) {
+            T result = database.transaction().execute(current -> {
+                limits(staffJdbc);
+                if (!database.access().principal().equals(staffJdbc.queryForObject(
+                    "select case when session_user = current_user then session_user::text end", String.class))) {
+                    throw new org.springframework.dao.PermissionDeniedDataAccessException("Unexpected content database principal", null);
+                }
+                Boolean active = staffJdbc.queryForObject(
+                    "select account_fence_routines.\"lockAndCheckActor\"(?, ?)", Boolean.class,
+                    binding.account, binding.revision);
+                guard.lock();
+                if (!Boolean.TRUE.equals(active)) {
+                    sessions.revoke(binding);
+                    throw StaffAuthentication.denied(StaffAuthentication.Rejection.AUTH_REQUIRED);
+                }
+                if (!sessions.current(binding)) {
+                    throw StaffAuthentication.denied(StaffAuthentication.Rejection.AUTH_REQUIRED);
+                }
+                return operation.materialize(staffJdbc, new StaffAuthentication.Actor(binding.account, binding.revision));
+            });
+            sessions.touch(binding);
+            return result;
+        }
+    }
+
     Profile profile(UUID account, long revision, String displayName) {
         return one(jdbc.query("select * from identity_api.profile(?, ?, ?)", (row, ignored) -> new Profile(
             row.getObject("user_id", UUID.class), row.getString("email"), row.getString("display_name"),
@@ -109,9 +142,13 @@ final class AuthenticationService {
     }
 
     private void limits() {
-        jdbc.execute("set local lock_timeout = '250ms'");
-        jdbc.execute("set local statement_timeout = '1000ms'");
-        jdbc.execute("set local transaction_timeout = '2000ms'");
+        limits(jdbc);
+    }
+
+    private static void limits(JdbcTemplate connection) {
+        connection.execute("set local lock_timeout = '250ms'");
+        connection.execute("set local statement_timeout = '1000ms'");
+        connection.execute("set local transaction_timeout = '2000ms'");
     }
 
     private static <T> T one(List<T> rows) {
