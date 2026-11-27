@@ -199,6 +199,96 @@ class ReadingPassagePostgresContractTest {
         }
     }
 
+    @Test
+    void measuresCandidateV15DraftReadAndEditWithTopicAndTranslations() throws SQLException {
+        final int samples = 30;
+        final int paragraphCount = 32;
+        Fixture fixture;
+        UUID topic;
+        try (var db = owner(FRESH)) {
+            fixture = seed(db);
+            topic = uuid(db, """
+                INSERT INTO content_reading.topics (slug, label) VALUES (?, 'Coastal geography') RETURNING id
+                """, "topic-" + UUID.randomUUID());
+            change(db, "UPDATE content_reading.passage_versions SET topic_id = ? WHERE id = ?", topic, fixture.edition());
+            rejectForeignKeyInTransaction(db, fixture);
+            for (int i = 3; i <= paragraphCount; i++) {
+                insertParagraph(db, fixture.edition(), i, "Coastal survey paragraph " + i);
+            }
+            assertEquals(paragraphCount, change(db, """
+                INSERT INTO content_reading.translations (paragraph_id, language, text)
+                SELECT id, 'vi-VN', 'Bản dịch thử nghiệm' FROM content_reading.paragraphs WHERE passage_version_id = ?
+                """, fixture.edition()));
+        }
+        List<Long> acquisition = new ArrayList<>();
+        List<Long> read = new ArrayList<>();
+        List<Long> edit = new ArrayList<>();
+        List<Long> rootLock = new ArrayList<>();
+        for (int i = 0; i < samples; i++) {
+            long openedAt = System.nanoTime();
+            try (var db = owner(FRESH)) {
+                acquisition.add(System.nanoTime() - openedAt);
+                db.setAutoCommit(false);
+                long readStarted = System.nanoTime();
+                try (var sql = db.prepareStatement("""
+                    SELECT v.topic_id, p.id, p.position, t.language, t.text
+                    FROM content_reading.passage_versions v
+                    JOIN content_reading.paragraphs p ON p.passage_version_id = v.id
+                    JOIN content_reading.translations t ON t.paragraph_id = p.id
+                    WHERE v.passage_id = ? AND v.id = ? ORDER BY p.position, t.language
+                    """)) {
+                    sql.setObject(1, fixture.root());
+                    sql.setObject(2, fixture.edition());
+                    try (var rows = sql.executeQuery()) {
+                        int seen = 0;
+                        while (rows.next()) {
+                            assertEquals(topic, rows.getObject(1, UUID.class));
+                            assertEquals(++seen, rows.getInt(3));
+                            assertEquals("vi-VN", rows.getString(4));
+                            assertEquals("Bản dịch thử nghiệm", rows.getString(5));
+                        }
+                        assertEquals(paragraphCount, seen);
+                    }
+                }
+                db.commit();
+                read.add(System.nanoTime() - readStarted);
+
+                long writeStarted = System.nanoTime();
+                lockPassage(db, fixture.root());
+                rootLock.add(System.nanoTime() - writeStarted);
+                assertEquals(1, bumpRevision(db, fixture, i + 1L));
+                assertEquals(1, change(db, "UPDATE content_reading.paragraphs SET body = ? WHERE id = ?",
+                        "Edited paragraph " + i, fixture.first()));
+                db.commit();
+                edit.add(System.nanoTime() - writeStarted);
+            }
+        }
+        printSample("connection-and-role-setup", acquisition);
+        printSample("draft-read-one-statement-through-commit", read);
+        printSample("paragraph-edit-three-statements-through-commit", edit);
+        printSample("uncontended-root-lock-statement", rootLock);
+    }
+
+    private static void rejectForeignKeyInTransaction(Connection db, Fixture fixture) throws SQLException {
+        db.setAutoCommit(false);
+        try {
+            rejectForeignKey(db, "UPDATE content_reading.passage_versions SET topic_id = ? WHERE id = ?",
+                    UUID.randomUUID(), fixture.edition());
+        } finally {
+            db.rollback();
+            db.setAutoCommit(true);
+        }
+    }
+
+    private static void printSample(String name, List<Long> elapsed) {
+        var sorted = elapsed.stream().sorted().toList();
+        System.out.printf(java.util.Locale.ROOT,
+                "V15 candidate %s n=%d p50=%.3fms p95=%.3fms max=%.3fms%n", name, sorted.size(),
+                sorted.get((int) Math.ceil(sorted.size() * 0.50) - 1) / 1_000_000.0,
+                sorted.get((int) Math.ceil(sorted.size() * 0.95) - 1) / 1_000_000.0,
+                sorted.getLast() / 1_000_000.0);
+    }
+
     private static void rejectForeignKey(Connection db, String command, Object... values) throws SQLException {
         var checkpoint = db.setSavepoint();
         try {

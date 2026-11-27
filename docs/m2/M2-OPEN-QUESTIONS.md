@@ -21,3 +21,7 @@ M2 Design v1.2 · 2026-11-27. Product Owner decisions and release authorization 
 M3 separately approves public discovery and TECH-06 sample policy. TECH-07 feedback, TECH-09 scoring/expiry, TECH-11 integrations and non-identity TECH-12 remain gated. The M4 expiry-worker gate remains open. No activation in M2.
 
 The Product Owner authorized implementation after the documentation release is verified. The open technical gates above remain in force. Previously closed M1 decisions and v1.6 remain unchanged.
+
+## Reading implementation status
+
+G03 now has isolated V15 Passage read and paragraph edit candidate measurements. Live authoring still needs bounded graph/cardinality limits and representative AUTH, fence, contention and pool data. Exercise/Evidence database tests require coordinator allocation and actual guarded persistence. G02 production principal mapping remains pending. Development and test use isolated synthetic identities. See the [M2.2 evidence and traceability](M2.2-ACCEPTANCE-REPORT.md) and [migration proposal](M2.2-READING-MIGRATION-SPEC.md).

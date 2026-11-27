@@ -87,10 +87,10 @@ final class ReadingDraftEdit {
 
     static void checkExerciseContent(UUID passageId, PinnedEdition pin, Exercise input) {
         checkPin(passageId, input.passageVersionId(), pin);
-        boolean foreignEvidence = input.groups().stream().flatMap(group -> group.questions().stream())
-                .flatMap(question -> question.evidence().stream())
-                .anyMatch(evidence -> !pin.paragraphIds().contains(evidence.paragraphId()));
-        if (foreignEvidence) {
+        boolean invalidEvidence = input.groups().stream().flatMap(group -> group.questions().stream())
+                .anyMatch(question -> new HashSet<>(question.evidence()).size() != question.evidence().size()
+                        || question.evidence().stream().anyMatch(ref -> !pin.paragraphIds().contains(ref.paragraphId())));
+        if (invalidEvidence) {
             throw new Conflict(400, "INVALID_EVIDENCE");
         }
     }

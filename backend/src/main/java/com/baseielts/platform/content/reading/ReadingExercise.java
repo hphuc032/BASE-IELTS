@@ -142,7 +142,7 @@ record ReadingExercise(UUID id, String slug, UUID passageId, UUID authorId, UUID
                         group.questions().stream().map(ReadingExercise::copyQuestion).toList())).toList());
     }
 
-    private static Question copyQuestion(StoredQuestion source) {
+    static Question copyQuestion(StoredQuestion source) {
         Marking marking = switch (source.marking()) {
             case null -> null;
             case CorrectOption choice -> new Choice(source.options().stream()

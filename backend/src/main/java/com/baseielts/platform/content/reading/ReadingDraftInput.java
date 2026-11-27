@@ -162,15 +162,22 @@ final class ReadingDraftInput {
             throw new Invalid("INVALID_INPUT");
         }
         List<Option> options = options(item, type);
-        List<Evidence> evidence = new ArrayList<>();
-        for (JsonNode entry : optionalArray(item.get("evidence"), Integer.MAX_VALUE)) {
-            object(entry, "paragraphId", "locator");
-            evidence.add(new Evidence(uuid(entry.get("paragraphId"), "INVALID_PARAGRAPH_ID"),
-                    text(entry, "locator", 240, false, false)));
-        }
         return new Question(type, prompt, text(item, "instructions", 2000, false, true), points(item.get("points")),
                 options, maxWords, marking(item.get("marking"), type, options, maxWords),
-                text(item, "explanation", 4000, false, true), List.copyOf(evidence));
+                text(item, "explanation", 4000, false, true), evidence(item.get("evidence")));
+    }
+
+    private static List<Evidence> evidence(JsonNode input) {
+        Set<Evidence> references = new java.util.LinkedHashSet<>();
+        for (JsonNode entry : optionalArray(input, Integer.MAX_VALUE)) {
+            object(entry, "paragraphId", "locator");
+            var reference = new Evidence(uuid(entry.get("paragraphId"), "INVALID_PARAGRAPH_ID"),
+                    text(entry, "locator", 240, false, false));
+            if (!references.add(reference)) {
+                throw new Invalid("INVALID_EVIDENCE");
+            }
+        }
+        return List.copyOf(references);
     }
 
     private static List<Option> options(JsonNode item, Type type) {

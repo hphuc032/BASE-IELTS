@@ -21,3 +21,5 @@ Content migrations are forward-only under separate ownership. A feature can land
 ## Reconciled sequencing
 
 M2.1 and canonical M2.2 can proceed independently after authorization within their respective gates. M2.3 uses exact Passage edition and paragraph IDs. M2.4 adds receipts and lookup under F03/F04 after the applicable technical decisions. See the [remediation crosswalk](M2-DECISION-REGISTER.md#v12-remediation-crosswalk) for work package dependencies. M2.5 verifies a safe fixture. Public discovery remains disabled until M3 and samples remain gated by TECH-06. The recorded M2 authorization takes effect after the design release is verified.
+
+Reading implementation evidence is tracked in the [M2.2 report](M2.2-ACCEPTANCE-REPORT.md). V15 storage and isolated authoring domain and DTO work have been tested. Live authoring and Lesson placement depend on fenced persistence and applicable G02/G03 evidence. The [Reading migration proposal](M2.2-READING-MIGRATION-SPEC.md) is for Integration Owner review and does not allocate a version or change the approved milestone sequence.
